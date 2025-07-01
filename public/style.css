@@ -1,0 +1,18 @@
+/* 2. style.css */
+/* public/style.css */
+body {
+  font-family: Arial;
+  padding: 20px;
+  direction: rtl;
+}
+input, select {
+  display: block;
+  margin: 10px 0;
+}
+#messages {
+  border: 1px solid #ccc;
+  height: 300px;
+  overflow-y: scroll;
+  padding: 10px;
+  margin-bottom: 10px;
+}

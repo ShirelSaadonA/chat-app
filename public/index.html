@@ -1,0 +1,70 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>צ'אט פשוט</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="joinForm">
+    <h2>הצטרף לצ'אט</h2>
+    <input type="text" id="nickname" placeholder="כינוי">
+    <input type="number" id="age" placeholder="גיל">
+    <select id="gender">
+      <option value="male">זכר</option>
+      <option value="female">נקבה</option>
+      <option value="other">אחר</option>
+    </select>
+    <input type="text" id="region" placeholder="אזור מגורים">
+    <button onclick="joinChat()">הצטרף</button>
+  </div>
+
+  <div id="chatRoom" style="display:none">
+    <div id="userList"></div>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="הקלד הודעה...">
+    <button onclick="sendMessage()">שלח</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myNickname = "";
+
+    function joinChat() {
+      const nickname = document.getElementById('nickname').value;
+      const age = document.getElementById('age').value;
+      const gender = document.getElementById('gender').value;
+      const region = document.getElementById('region').value;
+
+      if (!nickname || !age || !region) return alert('נא למלא את כל השדות');
+
+      myNickname = nickname;
+      socket.emit('join', { nickname, age, gender, region });
+      document.getElementById('joinForm').style.display = 'none';
+      document.getElementById('chatRoom').style.display = 'block';
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const msg = input.value;
+      if (msg.trim() === '') return;
+      socket.emit('message', msg);
+      input.value = '';
+    }
+
+    socket.on('userList', users => {
+      const list = users.map(u => `<div>${u.nickname} (${u.region})</div>`).join('');
+      document.getElementById('userList').innerHTML = '<h4>משתמשים:</h4>' + list;
+    });
+
+    socket.on('message', data => {
+      const div = document.createElement('div');
+      div.textContent = `${data.nickname}: ${data.message}`;
+      document.getElementById('messages').appendChild(div);
+    });
+  </script>
+</body>
+</html>
