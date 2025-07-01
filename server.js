@@ -22,6 +22,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('privateMessage', ({ toNickname, message }) => {
+    const recipient = users.find(u => u.nickname === toNickname);
+    const sender = users.find(u => u.id === socket.id);
+    if (recipient && sender) {
+      io.to(recipient.id).emit('privateMessage', {
+        from: sender.nickname,
+        message
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     const index = users.findIndex(u => u.id === socket.id);
     if (index !== -1) {

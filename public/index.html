@@ -1,70 +1,89 @@
-<!-- public/index.html -->
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>צ'אט פשוט</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>צ'אט עם הודעות פרטיות</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    #messages, #privateMessages { border: 1px solid #ccc; padding: 10px; height: 150px; overflow-y: auto; margin-bottom: 10px; }
+    #userList { list-style: none; padding: 0; }
+    #userList li { cursor: pointer; margin: 5px 0; }
+    #userList li:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-  <div id="joinForm">
-    <h2>הצטרף לצ'אט</h2>
-    <input type="text" id="nickname" placeholder="כינוי">
-    <input type="number" id="age" placeholder="גיל">
-    <select id="gender">
-      <option value="male">זכר</option>
-      <option value="female">נקבה</option>
-      <option value="other">אחר</option>
-    </select>
-    <input type="text" id="region" placeholder="אזור מגורים">
-    <button onclick="joinChat()">הצטרף</button>
-  </div>
+  <h2>ברוך הבא לצ'אט!</h2>
 
-  <div id="chatRoom" style="display:none">
-    <div id="userList"></div>
-    <div id="messages"></div>
-    <input type="text" id="messageInput" placeholder="הקלד הודעה...">
-    <button onclick="sendMessage()">שלח</button>
-  </div>
+  <label>שם משתמש: <input type="text" id="nickname" /></label>
+  <button onclick="joinChat()">הצטרף</button>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <h3>משתמשים מחוברים</h3>
+  <ul id="userList"></ul>
+
+  <h3>הודעות ציבוריות</h3>
+  <div id="messages"></div>
+  <input id="publicMsg" placeholder="כתוב הודעה ציבורית" />
+  <button onclick="sendPublicMessage()">שלח</button>
+
+  <h3>הודעות פרטיות</h3>
+  <div id="privateMessages"></div>
+  <label>שלח אל: <input id="toNickname" placeholder="הקלד שם משתמש" /></label><br>
+  <input id="privateMsg" placeholder="כתוב הודעה פרטית" />
+  <button onclick="sendPrivateMessage()">שלח</button>
+
   <script>
     const socket = io();
-    let myNickname = "";
+    let myNickname = '';
 
     function joinChat() {
-      const nickname = document.getElementById('nickname').value;
-      const age = document.getElementById('age').value;
-      const gender = document.getElementById('gender').value;
-      const region = document.getElementById('region').value;
-
-      if (!nickname || !age || !region) return alert('נא למלא את כל השדות');
-
-      myNickname = nickname;
-      socket.emit('join', { nickname, age, gender, region });
-      document.getElementById('joinForm').style.display = 'none';
-      document.getElementById('chatRoom').style.display = 'block';
+      const nicknameInput = document.getElementById('nickname');
+      if (!nicknameInput.value) return alert('יש להזין שם משתמש');
+      myNickname = nicknameInput.value;
+      socket.emit('join', { nickname: myNickname });
     }
 
-    function sendMessage() {
-      const input = document.getElementById('messageInput');
-      const msg = input.value;
-      if (msg.trim() === '') return;
-      socket.emit('message', msg);
-      input.value = '';
+    socket.on('userList', (users) => {
+      const list = document.getElementById('userList');
+      list.innerHTML = '';
+      users.forEach(user => {
+        if (user.nickname !== myNickname) {
+          const li = document.createElement('li');
+          li.textContent = user.nickname;
+          li.onclick = () => document.getElementById('toNickname').value = user.nickname;
+          list.appendChild(li);
+        }
+      });
+    });
+
+    socket.on('message', (data) => {
+      const div = document.getElementById('messages');
+      div.innerHTML += `<div><strong>${data.nickname}:</strong> ${data.message}</div>`;
+      div.scrollTop = div.scrollHeight;
+    });
+
+    socket.on('privateMessage', (data) => {
+      const div = document.getElementById('privateMessages');
+      div.innerHTML += `<div><strong>📩 ${data.from}:</strong> ${data.message}</div>`;
+      div.scrollTop = div.scrollHeight;
+    });
+
+    function sendPublicMessage() {
+      const msg = document.getElementById('publicMsg').value;
+      if (msg) {
+        socket.emit('message', msg);
+        document.getElementById('publicMsg').value = '';
+      }
     }
 
-    socket.on('userList', users => {
-      const list = users.map(u => `<div>${u.nickname} (${u.region})</div>`).join('');
-      document.getElementById('userList').innerHTML = '<h4>משתמשים:</h4>' + list;
-    });
-
-    socket.on('message', data => {
-      const div = document.createElement('div');
-      div.textContent = `${data.nickname}: ${data.message}`;
-      document.getElementById('messages').appendChild(div);
-    });
+    function sendPrivateMessage() {
+      const toNickname = document.getElementById('toNickname').value;
+      const message = document.getElementById('privateMsg').value;
+      if (toNickname && message) {
+        socket.emit('privateMessage', { toNickname, message });
+        document.getElementById('privateMsg').value = '';
+      }
+    }
   </script>
 </body>
 </html>
